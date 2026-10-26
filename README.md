@@ -11,7 +11,7 @@ Anti-counterfeit tracking for any product. Each item gets a signed QR identity. 
 You need [Node.js 20 or newer](https://nodejs.org).
 
 ```bash
-git clone https://github.com/gaganrasineni08/unigenome.git
+git clone https://github.com/saihardhikreddy/unigenome.git
 cd unigenome
 npm install
 npm run seed      # loads the demo data (takes about 10 seconds)
