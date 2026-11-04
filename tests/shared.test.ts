@@ -11,6 +11,7 @@ import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
 import { haversineKm, impliedSpeedKmh } from "../shared/geo";
+import { checkGstin, gstinCheckChar } from "../shared/gstin";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -120,5 +121,31 @@ describe("structures", () => {
     expect(km).toBeGreaterThan(1230);
     expect(km).toBeLessThan(1270);
     expect(impliedSpeedKmh({ lat: 17.39, lng: 78.49, ts: 0 }, { lat: 28.61, lng: 77.21, ts: 40 * 60_000 })).toBeGreaterThan(1800);
+  });
+});
+
+describe("gstin", () => {
+  const gstin = (first14: string) => first14 + gstinCheckChar(first14);
+
+  it("accepts a well-formed GSTIN and names its state", () => {
+    expect(checkGstin(gstin("36AABCN1234K1Z"))).toEqual({ ok: true, state: "Telangana", pan: "AABCN1234K" });
+    expect(checkGstin(" " + gstin("10AABCN1234K1Z").toLowerCase()).state).toBe("Bihar");
+  });
+
+  it("rejects a wrong check character", () => {
+    const g = gstin("27AABCN1234K1Z");
+    const wrong = g.slice(0, 14) + (g[14] === "0" ? "1" : "0");
+    expect(checkGstin(wrong)).toMatchObject({ ok: false, reason: expect.stringContaining("check digit") });
+  });
+
+  it("rejects state codes no state uses", () => {
+    for (const code of ["00", "45", "96"]) {
+      expect(checkGstin(gstin(code + "AABCN1234K1Z"))).toMatchObject({ ok: false, reason: expect.stringContaining(code) });
+    }
+  });
+
+  it("rejects malformed input", () => {
+    expect(checkGstin("36AABCN1234K1Y5").ok).toBe(false); // 14th character must be Z
+    expect(checkGstin("").ok).toBe(false);
   });
 });
