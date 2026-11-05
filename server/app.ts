@@ -8,6 +8,7 @@ import { EVENT_TYPES, eventHash, verifyEvent, type EventBody } from "../shared/e
 import { merkleProof, merkleRoot, buildLevels } from "../shared/dsa/merkle";
 import { haversineKm } from "../shared/geo";
 import { checkGstin } from "../shared/gstin";
+import { isoDateIST } from "../shared/dates";
 import { verifyChain } from "../shared/events";
 import { Graph, dijkstra } from "../shared/dsa/graph";
 import { db } from "./db";
@@ -761,8 +762,8 @@ app.get("/search", async (c) => {
 app.get("/expiring", async (c) => {
   const ix = await indexes();
   const days = Math.min(3650, Math.max(1, Number(c.req.query("days") ?? 30)));
-  const lo = new Date().toISOString().slice(0, 10);
-  const hi = new Date(now() + days * 86400_000).toISOString().slice(0, 10);
+  const lo = isoDateIST(now());
+  const hi = isoDateIST(now() + days * 86400_000);
   const d = await db();
   const hits = ix.expiry.range(lo, hi);
   const rows = hits.length ? await d.query("SELECT id, product_name, exp, mfr, status, issued FROM batches WHERE id = ANY($1)", [hits.map((h) => h.value)]) : [];

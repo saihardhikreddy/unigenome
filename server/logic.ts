@@ -3,6 +3,7 @@ import { toHex, randomBytes } from "../shared/bytes";
 import { sha256Hex } from "../shared/crypto";
 import { decodePayload, dnaOf, payloadFromScan, signerOf, verifyUnit, type SignedUnit } from "../shared/identity";
 import { haversineKm, impliedSpeedKmh, roundForPrivacy } from "../shared/geo";
+import { isoDateIST } from "../shared/dates";
 import { BinaryHeap, kWayMerge } from "../shared/dsa/heap";
 import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D, type Candidate } from "../shared/dsa/knapsack";
@@ -287,7 +288,7 @@ export async function verifyScan(text: string, ctx: { device: string; lat?: numb
     }
     const chain = [row, ...(await Promise.all((await ancestorIds(row.id)).map(getUnit)))];
     const condBad = chain.some((u) => u?.condition_bad);
-    const expired = f.kind === "item" && !!f.exp && f.exp < new Date().toISOString().slice(0, 10);
+    const expired = f.kind === "item" && !!f.exp && f.exp < isoDateIST(now());
     checks.push({ tier: "info", ok: !condBad, label: "Storage and handling checks passed" });
     if (f.kind === "item" && f.exp) checks.push({ tier: "info", ok: !expired, label: `Expiry date ${f.exp}` });
     if (verdict === "GENUINE" && (condBad || expired)) verdict = "CONDITION_COMPROMISED";

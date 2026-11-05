@@ -12,6 +12,7 @@ import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
 import { haversineKm, impliedSpeedKmh } from "../shared/geo";
 import { checkGstin, gstinCheckChar } from "../shared/gstin";
+import { isoDateIST } from "../shared/dates";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -147,5 +148,13 @@ describe("gstin", () => {
   it("rejects malformed input", () => {
     expect(checkGstin("36AABCN1234K1Y5").ok).toBe(false); // 14th character must be Z
     expect(checkGstin("").ok).toBe(false);
+  });
+});
+
+describe("dates", () => {
+  it("uses the Indian calendar date, not the UTC one", () => {
+    // 01:00 IST on 6 Nov is still 5 Nov in UTC: an item expiring on 5 Nov has expired in India.
+    expect(isoDateIST(Date.parse("2026-11-05T19:30:00Z"))).toBe("2026-11-06");
+    expect(isoDateIST(Date.parse("2026-11-05T18:29:59Z"))).toBe("2026-11-05");
   });
 });
