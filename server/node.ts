@@ -6,7 +6,10 @@ import { app } from "./app";
 
 const root = new Hono();
 root.route("/", app);
-if (process.env.NODE_ENV === "production") {
+// `npm start` passes --production instead of setting NODE_ENV=production inline,
+// because that `VAR=value cmd` syntax fails in the Windows shell.
+const production = process.argv.includes("--production") || process.env.NODE_ENV === "production";
+if (production) {
   root.use("/*", serveStatic({ root: "./dist" }));
   root.get("*", serveStatic({ path: "./dist/index.html" }));
 }

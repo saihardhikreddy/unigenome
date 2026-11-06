@@ -8,7 +8,7 @@
     "dev:api": "tsx watch server/node.ts",
     "dev:web": "vite",
     "build": "vite build",
-    "start": "NODE_ENV=production tsx server/node.ts",
+    "start": "tsx server/node.ts --production",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p .",
     "seed": "tsx server/seed-cli.ts --reset",
