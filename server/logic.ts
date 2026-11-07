@@ -3,7 +3,7 @@ import { toHex, randomBytes } from "../shared/bytes";
 import { sha256Hex } from "../shared/crypto";
 import { decodePayload, dnaOf, payloadFromScan, signerOf, verifyUnit, type SignedUnit } from "../shared/identity";
 import { haversineKm, impliedSpeedKmh, roundForPrivacy } from "../shared/geo";
-import { isoDateIST } from "../shared/dates";
+import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 import { BinaryHeap, kWayMerge } from "../shared/dsa/heap";
 import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D, type Candidate } from "../shared/dsa/knapsack";
@@ -220,7 +220,7 @@ export async function sweepOverdue() {
       severity: 3,
       unit: s.unit_id,
       party: s.to_party,
-      message: `Shipment ${s.id} of ${s.unit_id} is overdue (expected by ${new Date(Number(s.eta_ts)).toLocaleString("en-IN")})`,
+      message: `Shipment ${s.id} of ${s.unit_id} is overdue (expected by ${fmtDateTimeIST(Number(s.eta_ts))})`,
       dedupe: "overdue:" + s.id,
     });
   }
@@ -298,7 +298,7 @@ export async function verifyScan(text: string, ctx: { device: string; lat?: numb
     let clone = false;
     if (row.claimed_ts && row.claimed_device !== ctx.device) {
       clone = true;
-      reasons.push(`already claimed by a buyer on ${new Date(Number(row.claimed_ts)).toLocaleDateString("en-IN")}`);
+      reasons.push(`already claimed by a buyer on ${fmtDateIST(Number(row.claimed_ts))}`);
     }
     const last = ix.lastSeen.get(row.id);
     if (here && last) {

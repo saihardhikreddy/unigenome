@@ -12,7 +12,7 @@ import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
 import { haversineKm, impliedSpeedKmh } from "../shared/geo";
 import { checkGstin, gstinCheckChar } from "../shared/gstin";
-import { isoDateIST } from "../shared/dates";
+import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -156,5 +156,11 @@ describe("dates", () => {
     // 01:00 IST on 6 Nov is still 5 Nov in UTC: an item expiring on 5 Nov has expired in India.
     expect(isoDateIST(Date.parse("2026-11-05T19:30:00Z"))).toBe("2026-11-06");
     expect(isoDateIST(Date.parse("2026-11-05T18:29:59Z"))).toBe("2026-11-05");
+  });
+
+  it("formats server-side dates in IST, not the server's time zone", () => {
+    const ts = Date.parse("2026-11-05T19:30:00Z"); // 01:00 on 6 Nov in India
+    expect(fmtDateIST(ts)).toBe("6/11/2026");
+    expect(fmtDateTimeIST(ts)).toMatch(/^6\/11\/2026, 1:00:00\s?am$/i);
   });
 });
