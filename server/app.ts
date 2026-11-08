@@ -9,6 +9,7 @@ import { merkleProof, merkleRoot, buildLevels } from "../shared/dsa/merkle";
 import { haversineKm } from "../shared/geo";
 import { checkGstin } from "../shared/gstin";
 import { isoDateIST } from "../shared/dates";
+import { recallParams } from "../shared/params";
 import { verifyChain } from "../shared/events";
 import { Graph, dijkstra } from "../shared/dsa/graph";
 import { db } from "./db";
@@ -735,8 +736,7 @@ authed.post("/complaints/:id", async (c) => {
 authed.get("/recall/:batch", async (c) => {
   const me = c.get("party");
   requireRole(me.role, "regulator", "manufacturer");
-  const budget = Math.min(60, Math.max(1, Number(c.req.query("budget") ?? 10)));
-  const staff = Math.min(10, Math.max(1, Number(c.req.query("staff") ?? 3)));
+  const { budget, staff } = recallParams(c.req.query("budget"), c.req.query("staff"));
   return c.json(await recallAnalysis(c.req.param("batch"), budget, staff));
 });
 
@@ -847,7 +847,12 @@ app.get("/dsa/chain/:id", async (c) => {
   return c.json({ records: test.map((r) => ({ type: r.body.type, actor: ix.parties.get(r.body.actor)?.name, ts: r.body.ts, prev: r.body.prev, hash: r.hash })), check: verifyChain(test, (pid) => ix.parties.get(pid)?.publicKey) });
 });
 
-app.get("/dsa/recall/:batch", async (c) => c.json(await recallAnalysis(c.req.param("batch"), Number(c.req.query("budget") ?? 10), Number(c.req.query("staff") ?? 3))));
+// Public, so the same limits as /recall: an unbounded ?budget= would size the knapsack table
+// (candidates x budget x staff) without limit and could take the server down.
+app.get("/dsa/recall/:batch", async (c) => {
+  const { budget, staff } = recallParams(c.req.query("budget"), c.req.query("staff"));
+  return c.json(await recallAnalysis(c.req.param("batch"), budget, staff));
+});
 
 app.get("/dsa/hash", (c) => {
   const text = c.req.query("text") ?? "";

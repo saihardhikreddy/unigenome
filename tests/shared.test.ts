@@ -13,6 +13,7 @@ import { dfsCollect } from "../shared/dsa/tree";
 import { haversineKm, impliedSpeedKmh } from "../shared/geo";
 import { checkGstin, gstinCheckChar } from "../shared/gstin";
 import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
+import { intParam, recallParams } from "../shared/params";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -162,5 +163,23 @@ describe("dates", () => {
     const ts = Date.parse("2026-11-05T19:30:00Z"); // 01:00 on 6 Nov in India
     expect(fmtDateIST(ts)).toBe("6/11/2026");
     expect(fmtDateTimeIST(ts)).toMatch(/^6\/11\/2026, 1:00:00\s?am$/i);
+  });
+});
+
+describe("query parameters", () => {
+  it("clamps numbers and falls back to the default for junk", () => {
+    expect(intParam("7", 10, 1, 60)).toBe(7);
+    expect(intParam("7.9", 10, 1, 60)).toBe(7);
+    expect(intParam("100000000", 10, 1, 60)).toBe(60);
+    expect(intParam("-5", 10, 1, 60)).toBe(1);
+    for (const junk of [undefined, null, "", "  ", "abc", "NaN", "Infinity"]) expect(intParam(junk, 10, 1, 60)).toBe(10);
+  });
+
+  it("keeps the public recall planner's knapsack table small", () => {
+    expect(recallParams("1e9", "1000")).toEqual({ budget: 60, staff: 10 });
+    expect(recallParams(undefined, "abc")).toEqual({ budget: 10, staff: 3 });
+    // So the largest table it can build stays tiny.
+    const { budget, staff } = recallParams("1e9", "1e9");
+    expect(knapsack2D([{ id: "a", cost: 1, staff: 1, risk: 1 }], budget, staff).cells).toBe(2 * 61 * 11);
   });
 });
