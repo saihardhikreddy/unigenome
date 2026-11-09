@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { generateKeyPair } from "../shared/crypto";
+import { generateKeyPair, signMessage, verifyMessage } from "../shared/crypto";
+import { fromB64url, toB64url } from "../shared/bytes";
 import { decodePayload, dnaOf, encodePayload, signUnit, verifyUnit, type ItemFields } from "../shared/identity";
 import { eventHash, signEvent, verifyChain, type EventBody } from "../shared/events";
 import { merkleProof, merkleRoot, verifyProof } from "../shared/dsa/merkle";
@@ -181,5 +182,34 @@ describe("query parameters", () => {
     // So the largest table it can build stays tiny.
     const { budget, staff } = recallParams("1e9", "1e9");
     expect(knapsack2D([{ id: "a", cost: 1, staff: 1, risk: 1 }], budget, staff).cells).toBe(2 * 61 * 11);
+  });
+});
+
+describe("base64url", () => {
+  it("round-trips every tail length", () => {
+    for (let n = 0; n <= 7; n++) {
+      const b = Uint8Array.from({ length: n }, (_, i) => (i * 97 + 13) & 255);
+      expect(fromB64url(toB64url(b))).toEqual(b);
+    }
+    expect(toB64url(Uint8Array.from([0xfb, 0xff]))).toBe("-_8");
+    expect(fromB64url("-_8=")).toEqual(Uint8Array.from([0xfb, 0xff]));
+  });
+
+  it("rejects spellings toB64url never produces", () => {
+    expect(() => fromB64url("A")).toThrow(); // 6 bits is not a byte
+    expect(() => fromB64url("AB")).toThrow(); // last char carries bits past the byte
+    expect(fromB64url("AA")).toEqual(Uint8Array.from([0]));
+    expect(() => fromB64url("ab+c")).toThrow(); // standard base64, not url-safe
+  });
+
+  it("does not accept a second spelling of a signature", () => {
+    const kp = generateKeyPair();
+    const sig = signMessage("UG/test", { x: 1 }, kp.secretKey);
+    expect(verifyMessage("UG/test", { x: 1 }, sig, kp.publicKey)).toBe(true);
+    // 64 bytes -> 86 chars; the last char holds 4 spare bits. Setting one gives another spelling.
+    const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const twin = sig.slice(0, -1) + ALPHABET[ALPHABET.indexOf(sig.at(-1)!) | 1];
+    expect(twin).not.toBe(sig);
+    expect(verifyMessage("UG/test", { x: 1 }, twin, kp.publicKey)).toBe(false);
   });
 });

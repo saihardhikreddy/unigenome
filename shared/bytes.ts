@@ -36,8 +36,14 @@ export function toB64url(b: Uint8Array): string {
   return s;
 }
 
+/**
+ * Strict: only the encoding toB64url would produce is accepted. A loose decoder lets one value
+ * have several spellings (a 1-char tail, or stray bits in the last char), so the same signature
+ * or QR payload could show up as different strings.
+ */
 export function fromB64url(s: string): Uint8Array {
   const clean = s.replace(/=+$/, "");
+  if (clean.length % 4 === 1) throw new Error("bad base64url length");
   const out: number[] = [];
   let buf = 0;
   let bits = 0;
@@ -51,6 +57,7 @@ export function fromB64url(s: string): Uint8Array {
       out.push((buf >> bits) & 255);
     }
   }
+  if (bits > 0 && (buf & ((1 << bits) - 1)) !== 0) throw new Error("bad base64url padding bits");
   return new Uint8Array(out);
 }
 
