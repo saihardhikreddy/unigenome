@@ -167,6 +167,8 @@ part("4. Packing: one carton QR (Merkle root) for many items, then a pallet");
 {
   const bad = await pack(M, "carton", items.slice(0, 3), merkleRoot(["X"]));
   check("a carton whose signed Merkle root doesn't match its contents is refused", bad.status === 400, bad.json);
+  const dup = await pack(M, "carton", [items[0], items[1], items[1]]);
+  check("a carton listing the same item twice is refused", dup.status === 400 && /once/.test(JSON.stringify(dup.json)), dup.json);
 }
 const c1 = await pack(M, "carton", items.slice(0, 3));
 const c2 = await pack(M, "carton", items.slice(3));

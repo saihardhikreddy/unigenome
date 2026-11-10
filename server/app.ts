@@ -405,6 +405,9 @@ authed.post("/containers", async (c) => {
   if (f.by !== me.id) bad("Container must be signed by you");
   const sorted = [...children].sort();
   if (!sorted.length || f.count !== sorted.length) bad("Count does not match contents");
+  // The same id listed twice passed every check below (it wasn't packed yet when each copy was
+  // looked at), so a carton of 3 items could be signed and recorded as holding 4.
+  if (sorted.some((id, i) => i > 0 && id === sorted[i - 1])) bad("Each unit can only be packed once");
   if (merkleRoot(sorted) !== f.root) bad("Merkle root does not match the contents", 400);
   if (!verifyUnit(unit, p.publicKey)) bad("Container signature is invalid", 401);
   if (event.body.unit !== f.id || event.body.type !== "PACKED" || event.body.actor !== me.id || event.body.prev !== "0") bad("Bad packing record");
