@@ -67,15 +67,29 @@ export function randomBytes(n: number): Uint8Array {
   return b;
 }
 
-/** Deterministic JSON: object keys sorted at every level, so equal data always gives equal bytes. */
+/** Values JSON leaves out of an object (and writes as null in an array). */
+const skipped = (v: unknown) => v === undefined || typeof v === "function" || typeof v === "symbol";
+
+/**
+ * Deterministic JSON: object keys sorted at every level, so equal data always gives equal bytes.
+ *
+ * It follows JSON.stringify's rules for every value, because a body is signed on one side and
+ * verified on the other after a JSON round trip: canonical(v) must equal
+ * canonical(JSON.parse(JSON.stringify(v))). Before, an array hole or undefined became an empty
+ * slot ("[1,]") instead of null, and a Date became "{}" instead of its ISO string, so such a body
+ * failed verification after transport, and every Date signed the same.
+ */
 export function canonical(v: unknown): string {
-  if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return "[" + v.map(canonical).join(",") + "]";
+  if (v !== null && typeof v === "object" && typeof (v as { toJSON?: unknown }).toJSON === "function") {
+    v = (v as { toJSON: () => unknown }).toJSON(); // Date and anything else that defines toJSON
+  }
+  if (v === null || typeof v !== "object") return skipped(v) ? "null" : JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + Array.from(v, (x) => (skipped(x) ? "null" : canonical(x))).join(",") + "]";
   const o = v as Record<string, unknown>;
   return (
     "{" +
     Object.keys(o)
-      .filter((k) => o[k] !== undefined)
+      .filter((k) => !skipped(o[k]))
       .sort()
       .map((k) => JSON.stringify(k) + ":" + canonical(o[k]))
       .join(",") +

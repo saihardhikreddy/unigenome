@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateKeyPair, signMessage, verifyMessage } from "../shared/crypto";
-import { fromB64url, toB64url } from "../shared/bytes";
+import { canonical, fromB64url, toB64url } from "../shared/bytes";
 import { decodePayload, dnaOf, encodePayload, signUnit, verifyUnit, type ItemFields } from "../shared/identity";
 import { eventHash, signEvent, verifyChain, type EventBody } from "../shared/events";
 import { merkleProof, merkleRoot, verifyProof } from "../shared/dsa/merkle";
@@ -211,5 +211,38 @@ describe("base64url", () => {
     const twin = sig.slice(0, -1) + ALPHABET[ALPHABET.indexOf(sig.at(-1)!) | 1];
     expect(twin).not.toBe(sig);
     expect(verifyMessage("UG/test", { x: 1 }, twin, kp.publicKey)).toBe(false);
+  });
+});
+
+describe("canonical JSON", () => {
+  const roundTrip = (v: unknown) => JSON.parse(JSON.stringify(v));
+
+  it("sorts keys at every level", () => {
+    expect(canonical({ b: 1, a: { d: [3, { z: 1, y: 2 }], c: "x" } })).toBe('{"a":{"c":"x","d":[3,{"y":2,"z":1}]},"b":1}');
+  });
+
+  it("gives the same text before and after a JSON round trip", () => {
+    const values: unknown[] = [
+      { qty: 5, note: undefined, at: new Date(Date.UTC(2026, 10, 11, 9, 30)) },
+      [1, undefined, () => 0, 2],
+      { list: [new Date(0), null], n: NaN, inf: -Infinity },
+      { nested: { when: new Date(86_400_000), drop: undefined } },
+      "plain", 42, null, true,
+    ];
+    for (const v of values) expect(canonical(v)).toBe(canonical(roundTrip(v)));
+  });
+
+  it("writes array holes as null and dates as ISO strings", () => {
+    expect(canonical([1, undefined])).toBe("[1,null]");
+    expect(canonical({ at: new Date(0) })).toBe('{"at":"1970-01-01T00:00:00.000Z"}');
+    // Different dates must not sign the same.
+    expect(canonical({ at: new Date(0) })).not.toBe(canonical({ at: new Date(1) }));
+  });
+
+  it("a body signed with a Date verifies on the receiving side", () => {
+    const k = generateKeyPair();
+    const body = { batch: "B-1", made: new Date(Date.UTC(2026, 9, 2)), lots: [1, undefined] };
+    const sig = signMessage("UG/test", body, k.secretKey);
+    expect(verifyMessage("UG/test", roundTrip(body), sig, k.publicKey)).toBe(true);
   });
 });
