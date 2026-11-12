@@ -53,9 +53,18 @@ export class BinaryHeap<T> {
   }
 }
 
-/** Merge k lists that are each sorted by key into one sorted list. O(N log k). */
+/**
+ * Merge k lists that are each sorted by key into one sorted list. O(N log k).
+ * Stable: equal keys keep the order of their lists, so lists[0]'s entry comes first. A heap
+ * on the key alone put ties in whatever order its swaps left them, so a unit's own record
+ * could land after its carton's record from the same millisecond, and the order changed
+ * with the number of lists.
+ */
 export function kWayMerge<T>(lists: T[][], key: (x: T) => number): T[] {
-  const heap = new BinaryHeap<{ v: T; li: number; i: number }>((x, y) => key(x.v) < key(y.v));
+  const heap = new BinaryHeap<{ v: T; li: number; i: number }>((x, y) => {
+    const kx = key(x.v), ky = key(y.v);
+    return kx < ky || (kx === ky && x.li < y.li);
+  });
   lists.forEach((l, li) => l.length && heap.push({ v: l[0], li, i: 0 }));
   const out: T[] = [];
   while (heap.size) {

@@ -83,6 +83,10 @@ describe("structures", () => {
     expect([h.pop(), h.pop(), h.pop()]).toEqual([9, 5, 3]);
     expect(kWayMerge([[1, 4, 7], [2, 5], [0, 9]], (x) => x)).toEqual([0, 1, 2, 4, 5, 7, 9]);
   });
+  it("k-way merge keeps equal keys in list order", () => {
+    const lists = [[{ k: 1, n: "a1" }, { k: 1, n: "a2" }], [{ k: 1, n: "b1" }], [{ k: 1, n: "c1" }], [{ k: 0, n: "d0" }, { k: 1, n: "d1" }]];
+    expect(kWayMerge(lists, (x) => x.k).map((x) => x.n)).toEqual(["d0", "a1", "a2", "b1", "c1", "d1"]);
+  });
   it("trie finds by prefix", () => {
     const t = new Trie();
     ["B-1024", "B-1025", "B-2001"].forEach((k) => t.insert(k));
