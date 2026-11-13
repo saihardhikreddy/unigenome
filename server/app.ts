@@ -10,6 +10,7 @@ import { haversineKm } from "../shared/geo";
 import { checkGstin } from "../shared/gstin";
 import { isoDateIST } from "../shared/dates";
 import { recallParams } from "../shared/params";
+import { randomSample } from "../shared/sample";
 import { verifyChain } from "../shared/events";
 import { Graph, dijkstra } from "../shared/dsa/graph";
 import { db } from "./db";
@@ -539,7 +540,7 @@ authed.post("/events", async (c) => {
       });
       // Random spot-check chosen by the server, so nobody knows in advance which items will be checked.
       const fields = unit.fields as ContainerFields;
-      const sample = [...kids].sort(() => Math.random() - 0.5).slice(0, Math.min(kids.length, Math.max(1, Math.ceil(kids.length * 0.1))));
+      const sample = randomSample(kids, Math.max(1, Math.ceil(kids.length * 0.1)));
       extra = {
         released: kids.length,
         spotCheck: sample.map((id) => ({ id, proof: merkleProof(kids, kids.indexOf(id)) })),

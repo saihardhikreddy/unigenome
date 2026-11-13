@@ -15,6 +15,7 @@ import { haversineKm, impliedSpeedKmh } from "../shared/geo";
 import { checkGstin, gstinCheckChar } from "../shared/gstin";
 import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 import { intParam, recallParams } from "../shared/params";
+import { randomSample, secureRandomInt } from "../shared/sample";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -248,5 +249,33 @@ describe("canonical JSON", () => {
     const body = { batch: "B-1", made: new Date(Date.UTC(2026, 9, 2)), lots: [1, undefined] };
     const sig = signMessage("UG/test", body, k.secretKey);
     expect(verifyMessage("UG/test", roundTrip(body), sig, k.publicKey)).toBe(true);
+  });
+});
+
+describe("spot-check sampling", () => {
+  it("picks every item equally often", () => {
+    const items = Array.from({ length: 10 }, (_, i) => i);
+    const counts = new Array(10).fill(0);
+    const trials = 30000;
+    for (let t = 0; t < trials; t++) counts[randomSample(items, 1)[0]]++;
+    // Expected 3000 each; the old sort-based shuffle gave about 5900 for the first item and 1800 for the last.
+    for (const c of counts) expect(Math.abs(c - trials / 10)).toBeLessThan(300);
+  });
+  it("takes k distinct items, never more than there are", () => {
+    const s = randomSample(["a", "b", "c", "d", "e"], 3);
+    expect(new Set(s).size).toBe(3);
+    expect(randomSample(["a", "b"], 5).sort()).toEqual(["a", "b"]);
+    expect(randomSample([], 1)).toEqual([]);
+  });
+  it("is a Fisher-Yates shuffle step by step", () => {
+    const seq = [2, 0, 1];
+    expect(randomSample([10, 11, 12, 13], 3, () => seq.shift()!)).toEqual([12, 11, 13]);
+  });
+  it("draws integers in range and refuses bad bounds", () => {
+    for (let i = 0; i < 1000; i++) {
+      const v = secureRandomInt(7);
+      expect(v >= 0 && v < 7 && Number.isInteger(v)).toBe(true);
+    }
+    expect(() => secureRandomInt(0)).toThrow(RangeError);
   });
 });

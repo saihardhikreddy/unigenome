@@ -274,7 +274,7 @@ export function verifyProof(leafId: string, proof: ProofStep[], root: string): b
 **Where it is used.**
 
 - Packing: the browser computes `merkleRoot(children)` (`src/pages/portals/Manufacturer.tsx` → `Pack`), and the server recomputes and rejects a mismatch (`server/app.ts`: `if (merkleRoot(sorted) !== f.root) bad(...)`).
-- **Random spot checks**: when a retailer opens a carton, the server picks random items and sends `merkleProof` for each (`server/app.ts`, `UNPACKED`). The retailer scans those items and the browser checks `verifyProof` locally (`src/components/ScanAct.tsx` → `spotScan`). This catches an item swapped into the carton.
+- **Random spot checks**: when a retailer opens a carton, the server picks random items (an unbiased Fisher-Yates draw from the crypto random source, `shared/sample.ts`) and sends `merkleProof` for each (`server/app.ts`, `UNPACKED`). The retailer scans those items and the browser checks `verifyProof` locally (`src/components/ScanAct.tsx` → `spotScan`). This catches an item swapped into the carton.
 
 **See it live.** Manufacturer → **3 · Pack**: the carton QR carries the Merkle root of its items. Warehouse → scan the carton → **Receive**: the server asks for a spot check of random items, each proved with its Merkle path.
 
