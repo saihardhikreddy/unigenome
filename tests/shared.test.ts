@@ -7,7 +7,7 @@ import { merkleProof, merkleRoot, verifyProof } from "../shared/dsa/merkle";
 import { HashMap } from "../shared/dsa/hashmap";
 import { BinaryHeap, kWayMerge } from "../shared/dsa/heap";
 import { Trie } from "../shared/dsa/trie";
-import { AVLTree } from "../shared/dsa/avl";
+import { AVLTree, ROTATION_LOG_MAX } from "../shared/dsa/avl";
 import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
@@ -277,5 +277,27 @@ describe("spot-check sampling", () => {
       expect(v >= 0 && v < 7 && Number.isInteger(v)).toBe(true);
     }
     expect(() => secureRandomInt(0)).toThrow(RangeError);
+  });
+});
+
+describe("structure limits", () => {
+  it("hash map: has() sees a key stored with an undefined value, and bad sizes are refused", () => {
+    const m = new HashMap<number | undefined>(2);
+    m.set("a", undefined);
+    expect(m.has("a")).toBe(true);
+    expect(m.has("b")).toBe(false);
+    expect(m.delete("a")).toBe(true);
+    expect(m.has("a")).toBe(false);
+    expect(() => new HashMap(0)).toThrow(RangeError);
+    expect(() => new HashMap(2.5)).toThrow(RangeError);
+    expect(() => new HashMap(4, 0)).toThrow(RangeError);
+  });
+
+  it("AVL rotation log keeps only the newest entries", () => {
+    const t = new AVLTree<number>();
+    for (let i = 0; i < 500; i++) t.insert(`2026-${String(i).padStart(5, "0")}`, i); // ascending: rotates often
+    expect(t.rotations.length).toBe(ROTATION_LOG_MAX);
+    expect(t.range("2026-00000", "2026-99999").length).toBe(500);
+    expect(t.height).toBeLessThanOrEqual(Math.ceil(1.45 * Math.log2(500 + 2)));
   });
 });

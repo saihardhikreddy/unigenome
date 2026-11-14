@@ -17,6 +17,9 @@ export class HashMap<V> {
   resizes = 0;
 
   constructor(capacity = 8, private readonly maxLoad = 0.75) {
+    // A capacity of 0 made every bucketOf() a modulo by zero (NaN), so nothing could be stored.
+    if (!Number.isInteger(capacity) || capacity < 1) throw new RangeError(`capacity must be a whole number >= 1, got ${capacity}`);
+    if (!(maxLoad > 0)) throw new RangeError(`maxLoad must be above 0, got ${maxLoad}`);
     this.buckets = Array.from({ length: capacity }, () => []);
   }
 
@@ -37,8 +40,9 @@ export class HashMap<V> {
     return undefined;
   }
 
+  /** Whether the key is stored, even with the value undefined (get() can't tell those apart). */
   has(key: string) {
-    return this.get(key) !== undefined;
+    return this.buckets[this.bucketOf(key)].some(([k]) => k === key);
   }
 
   set(key: string, value: V) {

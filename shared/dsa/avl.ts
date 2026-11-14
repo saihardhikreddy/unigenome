@@ -14,9 +14,19 @@ const fix = (n: Node<any>) => {
 };
 const balanceOf = (n: Node<any>) => h(n.left) - h(n.right);
 
+/** Rotations kept for the DSA page, which shows the newest few. */
+export const ROTATION_LOG_MAX = 64;
+
 export class AVLTree<V> {
   root: Node<V> | null = null;
-  rotations: string[] = []; // log of rotations, newest last
+  // Log of rotations, newest last. Capped: every expiry date added on a long-running server
+  // used to add to it for good, though the DSA page only ever shows the last 8.
+  rotations: string[] = [];
+
+  private logRotation(entry: string) {
+    this.rotations.push(entry);
+    if (this.rotations.length > ROTATION_LOG_MAX) this.rotations.splice(0, this.rotations.length - ROTATION_LOG_MAX);
+  }
 
   private rotRight(y: Node<V>): Node<V> {
     const x = y.left!;
@@ -24,7 +34,7 @@ export class AVLTree<V> {
     x.right = y;
     fix(y);
     fix(x);
-    this.rotations.push(`right rotation at ${y.key}`);
+    this.logRotation(`right rotation at ${y.key}`);
     return x;
   }
 
@@ -34,7 +44,7 @@ export class AVLTree<V> {
     y.left = x;
     fix(x);
     fix(y);
-    this.rotations.push(`left rotation at ${x.key}`);
+    this.logRotation(`left rotation at ${x.key}`);
     return y;
   }
 
