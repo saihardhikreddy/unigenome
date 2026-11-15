@@ -54,8 +54,23 @@ function pack(u: SignedUnit): Packed {
   return [f.kind === "carton" ? "C" : "P", f.id, f.by, f.count, f.root, f.packed, u.sig];
 }
 
+const isStr = (v: unknown): v is string => typeof v === "string";
+
+/**
+ * Every field is checked for its type and count, because the payload is whatever a camera read.
+ * Before, ["I"] or ["C", 1, 2] decoded "successfully" with undefined or numeric ids, which then
+ * reached the database lookups and the UI as if they were real ids.
+ */
 function unpack(p: Packed): SignedUnit {
   const [t, ...r] = p as [string, ...any[]];
+  const fields = t === "I" ? 8 : t === "C" || t === "P" ? 6 : -1;
+  if (fields < 0) throw new Error("unknown QR type");
+  if (r.length !== fields) throw new Error("not a UniGenome code: wrong number of fields");
+  const strings = t === "I" ? r : r.filter((_, i) => i !== 2); // a container's count is a number
+  if (!strings.every(isStr) || strings.some((v, i) => v === "" && !(t === "I" && i === 5))) {
+    throw new Error("not a UniGenome code: a field is missing or not text");
+  }
+  if (t !== "I" && !(Number.isInteger(r[2]) && r[2] >= 0)) throw new Error("not a UniGenome code: bad count");
   if (t === "I") {
     const [id, batch, mfr, product, mfg, exp, salt, sig] = r;
     const f: ItemFields = { kind: "item", id, batch, mfr, product, mfg, salt };

@@ -35,6 +35,31 @@ describe("identity", () => {
     expect(verifyUnit({ ...u, f: item({ batch: "B-1025" }) }, k.publicKey)).toBe(false);
     expect(verifyUnit(u, generateKeyPair().publicKey)).toBe(false);
   });
+  it("round-trips an item without an expiry date and a carton", () => {
+    const k = generateKeyPair();
+    const noExp = signUnit(item({ exp: undefined }), k.secretKey);
+    expect(decodePayload(encodePayload(noExp)).f).toEqual(noExp.f);
+    const carton = signUnit({ kind: "carton", id: "C-9", by: "M-07", count: 0, root: "ab", packed: "2026-10-02T10:00:00Z" }, k.secretKey);
+    expect(decodePayload(encodePayload(carton))).toEqual(carton);
+  });
+  it("rejects payloads with missing or wrongly typed fields", () => {
+    const qr = (v: unknown) => toB64url(new TextEncoder().encode(JSON.stringify(v)));
+    const good = ["I", "I-1", "B-1024", "M-07", "PCM-500", "2026-10-02", "", "9f3a", "sig"];
+    expect(decodePayload(qr(good)).f.id).toBe("I-1");
+    for (const bad of [
+      ["I"], // used to decode to an item with every field undefined
+      good.slice(0, -1),
+      [...good, "extra"],
+      ["I", 7, ...good.slice(2)], // a numeric id
+      ["I", "", ...good.slice(2)], // an empty id
+      ["C", 1, 2],
+      ["C", "C-9", "M-07", "3", "ab", "2026-10-02", "sig"], // count as text
+      ["P", "P-1", "M-07", -1, "ab", "2026-10-02", "sig"],
+      ["X", "I-1"],
+    ]) {
+      expect(() => decodePayload(qr(bad)), JSON.stringify(bad)).toThrow();
+    }
+  });
 });
 
 describe("hash chain", () => {
