@@ -28,6 +28,11 @@ export const merkleRoot = (leafIds: string[]): string => {
 };
 
 export function merkleProof(leafIds: string[], index: number): ProofStep[] {
+  // indexOf() gives -1 for an id that isn't there, and an index past the end used to come back
+  // as a "proof" of undefined sibling hashes instead of an error.
+  if (!Number.isInteger(index) || index < 0 || index >= leafIds.length) {
+    throw new RangeError(`leaf index ${index} is not in a tree of ${leafIds.length} leaves`);
+  }
   const levels = buildLevels(leafIds);
   const proof: ProofStep[] = [];
   let i = index;

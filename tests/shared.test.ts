@@ -90,6 +90,7 @@ describe("merkle", () => {
       expect(verifyProof("I-x", merkleProof(ids, 0), root)).toBe(false);
     }
     expect(merkleProof(Array.from({ length: 48 }, (_, i) => "I-" + i), 3).length).toBe(6);
+    for (const bad of [-1, 3, 1.5, NaN]) expect(() => merkleProof(["a", "b", "c"], bad)).toThrow(RangeError);
   });
 });
 
