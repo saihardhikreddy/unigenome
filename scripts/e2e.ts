@@ -340,6 +340,8 @@ part("15. Search (trie) and expiring soon (AVL tree)");
   check("the AVL range query finds the batch expiring within 30 days", e.batches.some((b: any) => b.id === "B-0871"), e.batches.map((b: any) => b.id));
   const e2 = await ok("GET", "/expiring?days=3650");
   check("…and a 10-year range also includes the new batch", e2.batches.some((b: any) => b.id === BID));
+  const e3 = await ok("GET", "/expiring?days=abc");
+  check("a days value that isn't a number falls back to 30 days, not a 500", e3.lo === e.lo && e3.hi === e.hi, e3);
 }
 
 part("16. Tamper-evident history");

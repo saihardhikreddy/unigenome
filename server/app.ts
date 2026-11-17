@@ -765,7 +765,10 @@ app.get("/search", async (c) => {
 
 app.get("/expiring", async (c) => {
   const ix = await indexes();
-  const days = Math.min(3650, Math.max(1, Number(c.req.query("days") ?? 30)));
+  // "?days=abc" (or "?days=") used to give NaN, which slipped through min/max and made
+  // isoDateIST throw "Invalid time value": a 500 instead of the default 30-day window.
+  const asked = Number(c.req.query("days") || 30);
+  const days = Number.isFinite(asked) ? Math.min(3650, Math.max(1, Math.floor(asked))) : 30;
   const lo = isoDateIST(now());
   const hi = isoDateIST(now() + days * 86400_000);
   const d = await db();
