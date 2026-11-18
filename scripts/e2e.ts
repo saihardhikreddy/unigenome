@@ -187,6 +187,11 @@ part("5. Dispatch to one chosen company (hash chain, Dijkstra arrival estimate)"
   const d = await scan(M, pal.id, "DISPATCHED", { to: W1.id, ref: "TRK-E2E" });
   check("the pallet is dispatched to the Hyderabad warehouse", d.status === 200, d.json);
   check("an arrival estimate comes from Dijkstra on past delivery times", d.json.eta?.method === "dijkstra", d.json.eta);
+  const eta = await call("GET", "/eta?to=" + W1.id, undefined, M.token);
+  check("the arrival estimate for a known destination comes back", eta.status === 200 && eta.json.path.at(-1) === W1.id, eta.json);
+  const nowhere = await call("GET", "/eta?to=NOBODY", undefined, M.token);
+  const noTo = await call("GET", "/eta", undefined, M.token);
+  check("an estimate for an unknown or missing destination is refused, not made up", nowhere.status === 404 && noTo.status === 404, [nowhere.json, noTo.json]);
   const notMine = await scan(apollo, pal.id, "DISPATCHED", { to: W1.id });
   check("a company that doesn't hold it can't dispatch it", notMine.status === 403, notMine.json);
 }

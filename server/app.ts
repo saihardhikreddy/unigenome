@@ -579,7 +579,10 @@ authed.post("/events", async (c) => {
 
 authed.get("/eta", async (c) => {
   const me = c.get("party");
-  const to = c.req.query("to")!;
+  // An unknown or missing ?to= used to get a made-up "distance" estimate (12 h plus 300 km of
+  // road) for a destination that doesn't exist, with a path ending in undefined.
+  const to = c.req.query("to") ?? "";
+  if (!(await indexes()).parties.has(to)) bad(to ? `no company has the id ${to}` : "say where it is going (?to=)", 404);
   const eta = await estimateArrival(me.id, to);
   return c.json({ ...eta, expected: Math.round(now() + eta.hours * 3600_000) });
 });
