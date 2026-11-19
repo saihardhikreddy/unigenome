@@ -332,6 +332,10 @@ part("14. Recall: BFS over shipments, knapsack DP vs greedy");
   check("BFS from the maker reaches the warehouse and the shop", r.bfs.order.includes(W1.id) && r.bfs.order.includes(shop.id), r.bfs.order);
   check("the DP choice fits the budget and inspectors", r.dp.cost <= 10 && r.dp.staff <= 3, r.dp);
   check("the DP total risk is at least the greedy one", r.dp.risk >= r.greedy.risk, { dp: r.dp.risk, greedy: r.greedy.risk });
+  const noBatch = await call("GET", "/recall/NO-SUCH-BATCH?budget=10&staff=3", undefined, reg.token);
+  const noBatchLab = await call("GET", "/dsa/recall/NO-SUCH-BATCH", undefined);
+  check("recall analysis of a batch that doesn't exist is a 404, not a server error",
+    noBatch.status === 404 && noBatchLab.status === 404, [noBatch.json, noBatchLab.json]);
   await ok("POST", `/recall/${BID}`, {}, reg.token);
   const v = await ok("POST", "/verify", { text: await payload(items[1]), device: "phone-F", ...at });
   check("after the recall, a buyer scan says RECALLED", v.verdict === "RECALLED", v.verdict);

@@ -1,4 +1,5 @@
 // Domain logic: custody, histories, arrival estimates, verdicts, alerts and recall analysis.
+import { HTTPException } from "hono/http-exception";
 import { toHex, randomBytes } from "../shared/bytes";
 import { sha256Hex } from "../shared/crypto";
 import { decodePayload, dnaOf, payloadFromScan, signerOf, verifyUnit, type SignedUnit } from "../shared/identity";
@@ -361,7 +362,8 @@ export async function recallAnalysis(batchId: string, budget: number, staff: num
   const d = await db();
   const ix = await indexes();
   const batch = (await d.query("SELECT * FROM batches WHERE id = $1", [batchId]))[0];
-  if (!batch) throw new Error("unknown batch");
+  // A plain Error became "500 Server error: unknown batch"; a mistyped batch id is a 404.
+  if (!batch) throw new HTTPException(404, { message: "Unknown batch" });
   const items: string[] = (await d.query("SELECT id FROM units WHERE batch_id = $1", [batchId])).map((r) => r.id);
   // Every container that ever held an item of this batch, found by walking pack links upward.
   const touched = new Set(items);
