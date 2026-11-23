@@ -16,6 +16,7 @@ import { checkGstin, gstinCheckChar } from "../shared/gstin";
 import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 import { intParam, recallParams } from "../shared/params";
 import { randomSample, secureRandomInt } from "../shared/sample";
+import { fmtHours } from "../src/lib/format";
 
 const item = (over: Partial<ItemFields> = {}): ItemFields => ({
   kind: "item", id: "I-1", batch: "B-1024", mfr: "M-07", product: "PCM-500", mfg: "2026-10-02", exp: "2028-10-01", salt: "9f3a", ...over,
@@ -195,6 +196,22 @@ describe("dates", () => {
     const ts = Date.parse("2026-11-05T19:30:00Z"); // 01:00 on 6 Nov in India
     expect(fmtDateIST(ts)).toBe("6/11/2026");
     expect(fmtDateTimeIST(ts)).toMatch(/^6\/11\/2026, 1:00:00\s?am$/i);
+  });
+});
+
+describe("fmtHours", () => {
+  it("picks the unit after rounding, not before", () => {
+    expect(fmtHours(0.5)).toBe("30 min");
+    expect(fmtHours(0.999)).toBe("1.0 h"); // was "60 min"
+    expect(fmtHours(47.6)).toBe("2.0 days"); // was "48 h"
+    expect(fmtHours(3.25)).toBe("3.3 h");
+    expect(fmtHours(30)).toBe("30 h");
+    expect(fmtHours(72)).toBe("3.0 days");
+  });
+
+  it("says unknown instead of NaN", () => {
+    expect(fmtHours(NaN)).toBe("unknown");
+    expect(fmtHours(Infinity)).toBe("unknown");
   });
 });
 
