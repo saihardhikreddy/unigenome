@@ -6,7 +6,7 @@ import { hashOf, verifyMessage } from "../shared/crypto";
 import { dnaOf, encodePayload, verifyUnit, type ContainerFields, type ItemFields, type SignedUnit } from "../shared/identity";
 import { EVENT_TYPES, eventHash, verifyEvent, type EventBody } from "../shared/events";
 import { merkleProof, merkleRoot, buildLevels } from "../shared/dsa/merkle";
-import { haversineKm } from "../shared/geo";
+import { haversineKm, roundForPrivacy, toGeoPoint } from "../shared/geo";
 import { checkGstin } from "../shared/gstin";
 import { isoDateIST } from "../shared/dates";
 import { recallParams } from "../shared/params";
@@ -654,7 +654,10 @@ authed.get("/units/:id", async (c) => {
 app.post("/verify", async (c) => {
   const b = await c.req.json();
   if (!b.device) bad("Missing device id");
-  const r = await verifyScan(String(b.text ?? ""), { device: String(b.device), lat: b.lat ?? null, lng: b.lng ?? null, record: true });
+  // A location the phone sent as text, out of range or half missing used to reach the travel
+  // checks as NaN, which fails every comparison, so a genuine product read as a copied code.
+  const at = toGeoPoint(b.lat, b.lng);
+  const r = await verifyScan(String(b.text ?? ""), { device: String(b.device), lat: at?.lat ?? null, lng: at?.lng ?? null, record: true });
   const view = r.row ? await unitView(r.row.id) : null;
   return c.json({ verdict: r.verdict, checks: r.checks, reasons: r.reasons, unit: r.unit, view: r.verdict === "COUNTERFEIT" ? null : view });
 });
@@ -687,7 +690,8 @@ app.post("/complaints", async (c) => {
   let sev = SEVERITY[b.reason] + (withClaim ? 1 : 0) + (["COUNTERFEIT", "SUSPICIOUS_CLONE"].includes(b.verdict) ? 1 : 0);
   sev = Math.min(5, sev);
   const id = "CMP-" + toHex(randomBytes(3)).toUpperCase();
-  const p = b.lat != null ? { lat: Math.round(b.lat * 100) / 100, lng: Math.round(b.lng * 100) / 100 } : null;
+  const at = toGeoPoint(b.lat, b.lng);   // a lat without a lng used to store lng NaN
+  const p = at ? roundForPrivacy(at) : null;
   await d.query(
     `INSERT INTO complaints (id, unit_id, batch_id, reason, text, contact, with_claim, verdict, lat, lng, device, ts, status, severity)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'received',$13)`,

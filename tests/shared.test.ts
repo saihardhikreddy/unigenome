@@ -11,7 +11,7 @@ import { AVLTree, ROTATION_LOG_MAX } from "../shared/dsa/avl";
 import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
-import { haversineKm, impliedSpeedKmh } from "../shared/geo";
+import { haversineKm, impliedSpeedKmh, toGeoPoint } from "../shared/geo";
 import { checkGstin, gstinCheckChar } from "../shared/gstin";
 import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 import { intParam, recallParams } from "../shared/params";
@@ -156,6 +156,14 @@ describe("structures", () => {
     expect(km).toBeGreaterThan(1230);
     expect(km).toBeLessThan(1270);
     expect(impliedSpeedKmh({ lat: 17.39, lng: 78.49, ts: 0 }, { lat: 28.61, lng: 77.21, ts: 40 * 60_000 })).toBeGreaterThan(1800);
+  });
+  it("a phone location is used only when it is a real place", () => {
+    expect(toGeoPoint(17.39, 78.49)).toEqual({ lat: 17.39, lng: 78.49 });
+    expect(toGeoPoint("17.39", " 78.49 ")).toEqual({ lat: 17.39, lng: 78.49 });
+    expect(toGeoPoint(-90, 180)).toEqual({ lat: -90, lng: 180 });
+    for (const [lat, lng] of [[17.39, undefined], [null, 78.49], ["", ""], ["abc", 78.49], [91, 0], [0, -181], [NaN, 0], [{}, []]]) {
+      expect(toGeoPoint(lat, lng)).toBeNull();
+    }
   });
 });
 

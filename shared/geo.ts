@@ -6,6 +6,19 @@ export interface GeoPoint {
 }
 
 const R_KM = 6371;
+
+/**
+ * A location from untrusted JSON (the buyer's phone), or null when it isn't a real one.
+ * Numbers sent as strings ("17.38") are accepted; anything non-numeric, missing or outside
+ * the globe (lat beyond ±90, lng beyond ±180) is null, i.e. "no location".
+ */
+export function toGeoPoint(lat: unknown, lng: unknown): GeoPoint | null {
+  const num = (v: unknown) => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
+  const la = num(lat);
+  const ln = num(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(ln) || Math.abs(la) > 90 || Math.abs(ln) > 180) return null;
+  return { lat: la, lng: ln };
+}
 const rad = (d: number) => (d * Math.PI) / 180;
 
 export function haversineKm(a: GeoPoint, b: GeoPoint): number {
