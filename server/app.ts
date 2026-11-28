@@ -7,7 +7,7 @@ import { dnaOf, encodePayload, verifyUnit, type ContainerFields, type ItemFields
 import { EVENT_TYPES, eventHash, verifyEvent, type EventBody } from "../shared/events";
 import { merkleProof, merkleRoot, buildLevels } from "../shared/dsa/merkle";
 import { haversineKm, roundForPrivacy, toGeoPoint } from "../shared/geo";
-import { checkGstin } from "../shared/gstin";
+import { checkGstin, normalizeGstin } from "../shared/gstin";
 import { isoDateIST } from "../shared/dates";
 import { recallParams } from "../shared/params";
 import { randomSample } from "../shared/sample";
@@ -96,7 +96,13 @@ function cleanProof(p: any) {
   };
   const out: any = {
     licenceNo: str("licenceNo", "Licence number", 40).toUpperCase(),
-    gstin: str("gstin", "GSTIN", 15).toUpperCase(),
+    // Stored without spaces, so the "GSTIN not used by another company" check also catches the
+    // same GSTIN typed in groups (which was also refused as "too long").
+    gstin: (() => {
+      const g = normalizeGstin(str("gstin", "GSTIN", 30));
+      if (g.length > 15) bad("GSTIN is too long");
+      return g;
+    })(),
     address: str("address", "Address", 300),
     contactName: str("contactName", "Contact person", 80),
     phone: str("phone", "Phone", 20),

@@ -14,8 +14,14 @@ export function gstinCheckChar(first14: string): string {
   return CHARS[(36 - (sum % 36)) % 36];
 }
 
+/** A GSTIN as typed or pasted, in its 15-character form: GST certificates and invoices often print
+ * it in groups ("36 AABCN 1234K 1Z5"), and those spaces made a real GSTIN fail the format check. */
+export function normalizeGstin(raw: string): string {
+  return String(raw ?? "").replace(/\s+/g, "").toUpperCase();
+}
+
 export function checkGstin(raw: string): { ok: boolean; reason?: string; state?: string; pan?: string } {
-  const g = raw.trim().toUpperCase();
+  const g = normalizeGstin(raw);
   if (!FORMAT.test(g)) return { ok: false, reason: "not in GSTIN format" };
   const state = STATES[g.slice(0, 2)];
   if (!state) return { ok: false, reason: `no state has GST code ${g.slice(0, 2)}` };

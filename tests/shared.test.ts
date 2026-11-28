@@ -12,7 +12,7 @@ import { Graph, bfs, dijkstra } from "../shared/dsa/graph";
 import { greedyAllocate, knapsack2D } from "../shared/dsa/knapsack";
 import { dfsCollect } from "../shared/dsa/tree";
 import { haversineKm, impliedSpeedKmh, toGeoPoint } from "../shared/geo";
-import { checkGstin, gstinCheckChar } from "../shared/gstin";
+import { checkGstin, gstinCheckChar, normalizeGstin } from "../shared/gstin";
 import { fmtDateIST, fmtDateTimeIST, isoDateIST } from "../shared/dates";
 import { intParam, recallParams } from "../shared/params";
 import { randomSample, secureRandomInt } from "../shared/sample";
@@ -185,6 +185,13 @@ describe("gstin", () => {
     for (const code of ["00", "45", "96"]) {
       expect(checkGstin(gstin(code + "AABCN1234K1Z"))).toMatchObject({ ok: false, reason: expect.stringContaining(code) });
     }
+  });
+
+  it("accepts a GSTIN written in groups, as certificates print it", () => {
+    const g = gstin("36AABCN1234K1Z");
+    const grouped = `${g.slice(0, 2)} ${g.slice(2, 7)} ${g.slice(7, 12)}\t${g.slice(12)}`.toLowerCase();
+    expect(normalizeGstin(grouped)).toBe(g);
+    expect(checkGstin(grouped)).toEqual({ ok: true, state: "Telangana", pan: "AABCN1234K" });
   });
 
   it("rejects malformed input", () => {
